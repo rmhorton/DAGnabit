@@ -1,0 +1,519 @@
+---
+title: "DAGnabit"
+author: "Bob"
+date: "2025-07-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## BUGS Parser
+
+Please write a program in the R computing language that can read a script written for JAGS (an implementation of the BUGS language) and diagram the dependiencies of all the variables in a graph. Here is an example JAGS program:
+
+```
+	# Model
+	
+	model{
+	  # Data analysis
+		for (tmt in 1:2){										# Treatments tmt=1 (Seretide), tmt=2 (Fluticasone)
+			for (i in 1:4){										# There are 4 non-absorbing health states
+				r[tmt,i,1:5] ~ dmulti(pi[tmt,i,1:5],n[tmt,i])		# Multinomial DATA
+				pi[tmt,i,1:5] ~ ddirch(prior[tmt,i,1:5])		    # Dirichlet prior for probs.
+			}
+		}
+	  # Calculating summaries from a decision model
+		for (tmt in 1:2){ 
+			for (i in 1:5){ s[tmt,i,1]<- equals(i,1) }  	# Initialise starting state: 1 in STW, 0 in all other states
+			for (i in 1:4){  
+				for (t in 2:13){
+					s[tmt,i,t] <- inprod(s[tmt,1:4,t-1], pi[tmt,1:4,i]) 	# Run the model for 12 cycles. 
+																										# s[tmt,i,t] = no. in state i at time t under treatment tmt
+					}
+				E[tmt,i] <- sum(s[tmt,i,2:13])							# Sum up time spent in state i
+				}
+			E[tmt,5] <- 12 - sum(E[tmt,1:4])							# Time in TF = 12 minus time in other states.
+		}
+	
+		for (i in 1:5){
+			D[i] <- E[1,i] - E[2,i]												# Additional time in state i under Seretide rather than FT
+			prob[i] <- step(D[i])													# Indicates whether Seretide gives longer time in state i
+		}
+			
+	}
+```
+
+Please write R code to parse this JAGS code and construct a diagram.
+
+
+```{r r_code_igraph}
+
+library(stringr)
+library(igraph)
+library(tidyverse)
+
+# Function to extract variable names (e.g., r[tmt,i,1:5] -> r)
+extract_var <- function(expr) {
+  str_extract(expr, "^[a-zA-Z_][a-zA-Z0-9_]*")
+}
+
+# Extract variables from the RHS of an expression
+find_dependencies <- function(rhs) {
+  # Remove functions (like ddirch(), inprod(), equals())
+  rhs_clean <- gsub("\\b(if|for|in|sum|equals|inprod|step|dmulti|ddirch)\\b", "", rhs)
+  # Remove numbers, symbols, brackets
+  rhs_clean <- gsub("[^a-zA-Z0-9_]", " ", rhs_clean)
+  # Split and extract unique variable names
+  vars <- unique(str_extract_all(rhs_clean, "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b")[[1]])
+  return(vars)
+}
+
+# Parse a JAGS model and extract dependencies
+parse_jags_dependencies <- function(jags_code) {
+  lines <- str_split(jags_code, "\n")[[1]]
+  lines <- str_trim(lines)
+  lines <- lines[!str_detect(lines, "^#|^$")]  # Remove comments and blanks
+
+  edges <- list()
+
+  for (line in lines) {
+    # Match assignment or sampling
+    if (str_detect(line, "<-") | str_detect(line, "~")) {
+      parts <- str_split(line, "<-|~")[[1]]
+      if (length(parts) == 2) {
+        lhs <- str_trim(parts[1])
+        rhs <- str_trim(parts[2])
+        lhs_var <- extract_var(lhs)
+        rhs_vars <- find_dependencies(rhs)
+        for (dep in rhs_vars) {
+          if (!is.na(dep) && dep != lhs_var) {
+            edges <- append(edges, list(c(dep, lhs_var)))
+          }
+        }
+      }
+    }
+  }
+
+  return(edges)
+}
+
+# Draw the graph
+draw_dependency_graph <- function(edges) {
+  g <- graph_from_edgelist(do.call(rbind, edges), directed = TRUE)
+  plot(g,
+       vertex.label.cex = 0.8,
+       vertex.label.color = "black",
+       vertex.color = "lightblue",
+       edge.arrow.size = 0.4,
+       layout = layout_with_kk)
+}
+
+# === Example usage ===
+
+jags_code <- "
+model{
+  for (tmt in 1:2){
+    for (i in 1:4){
+      r[tmt,i,1:5] ~ dmulti(pi[tmt,i,1:5],n[tmt,i])
+      pi[tmt,i,1:5] ~ ddirch(prior[tmt,i,1:5])
+    }
+  }
+
+  for (tmt in 1:2){ 
+    for (i in 1:5){ s[tmt,i,1]<- equals(i,1) }
+    for (i in 1:4){  
+      for (t in 2:13){
+        s[tmt,i,t] <- inprod(s[tmt,1:4,t-1], pi[tmt,1:4,i])
+      }
+      E[tmt,i] <- sum(s[tmt,i,2:13])
+    }
+    E[tmt,5] <- 12 - sum(E[tmt,1:4])
+  }
+
+  for (i in 1:5){
+    D[i] <- E[1,i] - E[2,i]
+    prob[i] <- step(D[i])
+  }
+}
+"
+
+edges <- parse_jags_dependencies(jags_code)
+draw_dependency_graph(edges)
+
+
+```
+
+
+```{r DiagrammeR_version}
+library(DiagrammeR)
+library(stringr)
+library(tidyverse)
+
+# Extract base variable name
+extract_base_var <- function(expr) {
+  str_extract(expr, "^[a-zA-Z_][a-zA-Z0-9_]*")
+}
+
+# Extract variable names from RHS expression
+find_dependencies <- function(rhs) {
+  rhs_clean <- gsub("\\b(if|for|in|sum|equals|inprod|step|dmulti|ddirch)\\b", "", rhs)
+  rhs_clean <- gsub("[^a-zA-Z0-9_]", " ", rhs_clean)
+  unique(str_extract_all(rhs_clean, "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b")[[1]])
+}
+
+# Build DiagrammeR graph from JAGS code
+parse_jags_to_diagrammer <- function(jags_code) {
+  lines <- str_split(jags_code, "\n")[[1]] |>
+    str_trim() |>
+    discard(~ str_starts(., "#") | . == "")
+
+  edge_list <- list()
+
+  for (line in lines) {
+    if (str_detect(line, "<-") | str_detect(line, "~")) {
+      parts <- str_split(line, "<-|~")[[1]]
+      if (length(parts) == 2) {
+        lhs <- str_trim(parts[1])
+        rhs <- str_trim(parts[2])
+        lhs_var <- extract_base_var(lhs)
+        rhs_vars <- find_dependencies(rhs)
+        for (dep in rhs_vars) {
+          if (!is.na(dep) && dep != lhs_var) {
+            edge_list <- append(edge_list, list(c(dep, lhs_var)))
+          }
+        }
+      }
+    }
+  }
+
+  # Unique variable names
+  all_vars <- sort(unique(unlist(edge_list)))
+
+  # Create empty graph
+  g <- create_graph()
+
+  # Add nodes by label (DiagrammeR assigns IDs)
+  for (v in all_vars) {
+    g <- add_node(g, label = v)
+  }
+
+  # Get node label → id mapping
+  node_df <- get_node_df(g)
+  node_map <- setNames(node_df$id, node_df$label)
+
+  # Add edges using ID lookups
+  for (e in edge_list) {
+    from_label <- e[1]
+    to_label <- e[2]
+    if (from_label %in% names(node_map) && to_label %in% names(node_map)) {
+      g <- add_edge(
+        g,
+        from = node_map[[from_label]],
+        to = node_map[[to_label]]
+      )
+    }
+  }
+
+  return(g)
+}
+
+jags_code <- "
+model{
+  for (tmt in 1:2){
+    for (i in 1:4){
+      r[tmt,i,1:5] ~ dmulti(pi[tmt,i,1:5],n[tmt,i])
+      pi[tmt,i,1:5] ~ ddirch(prior[tmt,i,1:5])
+    }
+  }
+
+  for (tmt in 1:2){ 
+    for (i in 1:5){ s[tmt,i,1]<- equals(i,1) }
+    for (i in 1:4){  
+      for (t in 2:13){
+        s[tmt,i,t] <- inprod(s[tmt,1:4,t-1], pi[tmt,1:4,i])
+      }
+      E[tmt,i] <- sum(s[tmt,i,2:13])
+    }
+    E[tmt,5] <- 12 - sum(E[tmt,1:4])
+  }
+
+  for (i in 1:5){
+    D[i] <- E[1,i] - E[2,i]
+    prob[i] <- step(D[i])
+  }
+}
+"
+
+g <- parse_jags_to_diagrammer(jags_code)
+render_graph(g)
+
+
+
+```
+
+```{r colored_nodes}
+library(DiagrammeR)
+library(stringr)
+library(tidyverse)
+
+extract_base_var <- function(expr) {
+  str_extract(expr, "^[a-zA-Z_][a-zA-Z0-9_]*")
+}
+
+find_dependencies <- function(rhs) {
+  keywords <- c("if", "for", "in", "sum", "equals", "inprod", "step", "dmulti", "ddirch", "model")
+  rhs_clean <- rhs
+  for (kw in keywords) {
+    rhs_clean <- gsub(paste0("\\b", kw, "\\b"), "", rhs_clean)
+  }
+  rhs_clean <- gsub("[^a-zA-Z0-9_]", " ", rhs_clean)
+  unique(str_extract_all(rhs_clean, "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b")[[1]])
+}
+
+classify_node_types <- function(lines) {
+  node_types <- list(data = character(), prior = character(), computed = character())
+
+  for (line in lines) {
+    if (str_detect(line, "~")) {
+      parts <- str_split(line, "~")[[1]]
+      lhs <- extract_base_var(str_trim(parts[1]))
+      rhs <- str_trim(parts[2])
+      if (str_detect(rhs, "d")) {
+        if (str_detect(rhs, "multi|bern|norm|pois|bin|cat|dirich")) {
+          node_types$data <- union(node_types$data, lhs)
+        } else {
+          node_types$prior <- union(node_types$prior, lhs)
+        }
+      } else {
+        node_types$prior <- union(node_types$prior, lhs)
+      }
+    } else if (str_detect(line, "<-")) {
+      lhs <- extract_base_var(str_trim(str_split(line, "<-")[[1]][1]))
+      node_types$computed <- union(node_types$computed, lhs)
+    }
+  }
+
+  return(node_types)
+}
+
+parse_jags_to_diagrammer <- function(jags_code) {
+  lines <- str_split(jags_code, "\n")[[1]] |>
+    str_trim() |>
+    discard(~ str_starts(., "#") | . == "")
+
+  edge_list <- list()
+
+  for (line in lines) {
+    if (str_detect(line, "<-") | str_detect(line, "~")) {
+      parts <- str_split(line, "<-|~")[[1]]
+      if (length(parts) == 2) {
+        lhs <- extract_base_var(str_trim(parts[1]))
+        rhs <- str_trim(parts[2])
+        rhs_vars <- find_dependencies(rhs)
+        for (dep in rhs_vars) {
+          if (!is.na(dep) && dep != lhs) {
+            edge_list <- append(edge_list, list(c(dep, lhs)))
+          }
+        }
+      }
+    }
+  }
+
+  all_vars <- sort(unique(unlist(edge_list)))
+  node_types <- classify_node_types(lines)
+
+  # Create graph and add nodes (just labels)
+  g <- create_graph()
+  for (v in all_vars) {
+    g <- add_node(g, label = v)
+  }
+
+  # Get node dataframe
+  node_df <- get_node_df(g)
+
+  # Define colors by node type
+  fillcolors <- sapply(node_df$label, function(lbl) {
+    if (lbl %in% node_types$data) {
+      "lightblue"
+    } else if (lbl %in% node_types$prior) {
+      "palegreen"
+    } else {
+      "gray90"
+    }
+  })
+
+  # Set attributes for all nodes
+  g <- set_node_attrs(
+    graph = g,
+    node_attr = "shape",
+    values = rep("ellipse", nrow(node_df))
+  )
+  g <- set_node_attrs(
+    graph = g,
+    node_attr = "style",
+    values = rep("filled", nrow(node_df))
+  )
+  g <- set_node_attrs(
+    graph = g,
+    node_attr = "fillcolor",
+    values = fillcolors
+  )
+
+  # Map labels to ids for edges
+  node_map <- setNames(node_df$id, node_df$label)
+
+  for (e in edge_list) {
+    from_label <- e[1]
+    to_label <- e[2]
+    if (from_label %in% names(node_map) && to_label %in% names(node_map)) {
+      g <- add_edge(
+        g,
+        from = node_map[[from_label]],
+        to = node_map[[to_label]]
+      )
+    }
+  }
+
+  return(g)
+}
+
+jags_code <- "
+model{
+  for (tmt in 1:2){
+    for (i in 1:4){
+      r[tmt,i,1:5] ~ dmulti(pi[tmt,i,1:5],n[tmt,i])
+      pi[tmt,i,1:5] ~ ddirch(prior[tmt,i,1:5])
+    }
+  }
+
+  for (tmt in 1:2){ 
+    for (i in 1:5){ s[tmt,i,1]<- equals(i,1) }
+    for (i in 1:4){  
+      for (t in 2:13){
+        s[tmt,i,t] <- inprod(s[tmt,1:4,t-1], pi[tmt,1:4,i])
+      }
+      E[tmt,i] <- sum(s[tmt,i,2:13])
+    }
+    E[tmt,5] <- 12 - sum(E[tmt,1:4])
+  }
+
+  for (i in 1:5){
+    D[i] <- E[1,i] - E[2,i]
+    prob[i] <- step(D[i])
+  }
+}
+"
+
+g <- parse_jags_to_diagrammer(jags_code)
+render_graph(g)
+
+
+
+```
+
+
+```{r all_jags_distributions, eval=FALSE}
+# Discrete Distributions:
+Bernoulli: dbern(p)
+Binomial: dbin(p, n)
+Categorical: dcat(p)
+Poisson: dpois(lambda)
+Geometric: dnegbin(p, 1)
+Negative Binomial: dnegbin(p, r)
+Beta-Binomial distribution
+Noncentral hypergeometric distribution
+Hypergeometric distribution 
+
+# Continuous Distributions:
+Normal: dnorm(mean, precision) (note the use of precision instead of standard deviation)
+Beta:
+Chi:
+F-distribution
+Noncentral_chisq_distribution
+Exponential:
+Uniform: 
+	
+# Other Distributions:
+Interval_Censored_Data: dinterval 
+
+Discrete Distributions: 
+Bernoulli: dbern(p)
+Binomial: dbin(p, n)
+Categorical: dcat(p)
+Poisson: dpois(lambda)
+Geometric: dnegbin(p, 1)
+Negative Binomial: dnegbin(p, r)
+# Beta-Binomial distribution
+# Noncentral hypergeometric distribution
+# Hypergeometric distribution 
+
+# See section 9.2 of the user manual.
+
+Continuous Distributions: 
+Uniform: X ~ dunif(a, b)
+Normal: dnorm(mu, tau) (Note: JAGS uses precision (τ), which is the inverse of variance, instead of standard deviation (σ)).
+Exponential: dexp(lambda)
+Gamma: dgamma(alpha, lambda)
+Beta:  dbeta(a,b)
+Chi-squared:  dchisqr(m)
+F-distribution:  df(n, m)
+Noncentral Chi-squared: Supported with the function dnchisqr(nu, delta).
+# Beta-binomial: Supported in JAGS.
+# Noncentral Hypergeometric: Supported in JAGS. 
+
+Other Distributions:
+Normal Mixture: the JAGS mix module defines the dnormmix(mu,tau,pi) distribution for finite mixtures of normal distributions. 
+Interval_Censored_Data: dinterval 
+
+
+operators <- c('||', '&&', '!', '>', '<=', '<', '<=', '=', '==', '!=', '+', '-', '*', '/', ':', '^', '%*%' )
+
+# user manual: https://people.stat.sc.edu/hansont/stat740/jags_user_manual.pdf
+# Table 9.1, p41
+
+jags_functions <- c(
+	"abs(x)",           "arccos(x)",        "arccosh(x)",       "arcsin(x)",       
+	"arcsinh(x)",       "arctan(x)",        "arctanh(x)",       "cos(x)",          
+	"cosh(x)",          "cloglog(x)",       "equals(x,y)",      "exp(x)",          
+	"icloglog(x)",      "ifelse(x,a,b)",    "ilogit(x)",       
+	"log(x)",           "logfact(x)",       "loggam(x)",        "logit(x)",        
+	"phi(x)",           "pow(x,z)",         "probit(x)",        "round(x)",        
+	"sin(x)",           "sinh(x)",          "sqrt(x)",          "step(x)",         
+	"tan(x)",           "tanh(x)",          "trunc(x)" 
+) %>% gsub("\\(.*", "", .)
+
+# Table 9.2 has "Scalar-valued functions with general arguments".
+
+# Table 9.3: vector or matrix valued functions:
+vec_mat_functions <- c(
+	"inverse(a)",
+	"rank(v)",
+	"rep(v, t)",
+	"order(v)",
+	"sort(v)",
+	"t(a)"
+)
+
+```
+
+# DoodleBUGS example
+
+```
+model{ 
+	for (i in 1:71){
+		y[i] ~ dbin(theta[i],n[i])
+		theta[i] <- exp(mu[i])/(1+exp(mu[i]))
+		mu[i] ~ dnorm(nu,tau)
+		r[i]<-y[i]/n[i]
+	}
+	nu ~ dnorm(0.0,0.001)
+	tau ~ dgamma(0.001,0.001)
+	mtheta<-exp(nu)/(1+exp(nu))
+}
+
+#inits
+list(nu=0,tau=1)
+
+```

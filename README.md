@@ -1,2 +1,60 @@
-# DAGnabit
-Generate DAG diagrams from BUGS code
+# DAGnabit: An R package for generating Directed Acyclic Graph diagrams from BUGS code.
+
+## Student Project
+
+The ability to visualize graphs is widely useful:
+
+	* Applications of [graphical models](https://en.wikipedia.org/wiki/Graphical_model)
+		- [Gene regulatory networks](https://en.wikipedia.org/wiki/Gene_regulatory_network)
+		- [Causal models](https://en.wikipedia.org/wiki/Causal_model)
+		- [Bayesian Belief Networks](https://en.wikipedia.org/wiki/Bayesian_network)
+		- [Decision analysis](https://en.wikipedia.org/wiki/Decision_analysis)
+	  - Probabilistic Bayesian modeling (e.g., with BUGS).
+	
+The BUGS programming language was developed to develop MCMC models that can be solved with Gibbs sampling.
+Any BUGS program can be represented as a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph) (DAG), which can be visualized with a diagram.
+An important early implementation was WinBUGS for Windows.
+[JAGS](https://mcmc-jags.sourceforge.io/) is a newer implementation of the BUGS language, which also runs on Mac and Linux. It is usually called from R.
+		
+### Ideas and comments
+
+	* I have developed several version of a [proof-of-concept prototype](https://github.com/rmhorton/DAGnabit) using ChatGPT. It shows the idea of parsing BUGS code and drawing a graph, but it has issues:
+		- They make some mistakes (e.g., it included some things that are not really nodes, like the word "for")
+		- They do not fully implement the [diagram conventions](https://www.multibugs.org/documentation/latest/ModelSpecification.html) (plates, for example)
+	
+	* Existing DAG packages for R seem to be focused on [causal modeling](https://cran.r-project.org/web/packages/ggdag/vignettes/intro-to-dags.html):
+		- [ggdag](https://cran.r-project.org/web/packages/ggdag/vignettes/intro-to-ggdag.html)
+		- [shinydag](https://www.gerkelab.com/project/shinydag/)
+	
+  * There are lots of JAGS and WinBUGS programs available, many of which do not have published DAG diagrams. Here are some interesting biomedical examples:
+		- Health Technology Assessment
+			+ [R for Health Technology Assessment](https://gianluca.statistica.it/books/online/r-hta/) includes an introduction to the field.
+			+ [ARCESDMH](https://github.com/rmhorton/ARCESDMH) JAGS code
+		- Many other examples from WinBUGS documentation
+			+ hierarchical models
+		
+	* semi-automatic layout
+		- Use automatic layout for a first pass. Let the user edit it interactively by dragging nodes around (maybe in [dagitty](https://www.dagitty.net/dags.html), or something like it), then capture coordinates for the final figure.
+		
+	* BUGS is not a general purpose programming language. It is very specialized, and all the syntax can be demonstrated in a short example. To build a parser, the AI will also need a table of reserved words, including built-in functions and statistical distributions. I have started collecting some of these in the proof-of-concept RMarkdown document.
+	
+	* You may have heard of [Stan](https://mc-stan.org/), which is an even newer, more sophisticated language and system for programming MCMC models. It can do things besides implementing models described as DAGs.
+
+
+### Goals
+
+	* Learn how to visualize graphs in R (maybe with a Javascript library)
+	* Become familiar with applications of graphs in biology, statistics and data science.
+	* Secondary goals: Learn a bit about 
+		+ Health Technology Assessment
+		+ BUGS
+		+ Bayesian modeling
+		
+### Deliverables
+This project is to build an R package to draw DAG diagrams from a given BUGS/JAGS model. The package will include:
+
+	* implementation of a BUGS/JAGS parser
+	* examples (in this case, your data is BUGS code; you will want a set of examples that demonstrate the capabilities and limitations of your system)
+	* Vignettes (detailed guides or tutorials on how to use the R package)
+	
+Your job is to get the code working (using vibe coding, and a little help from me), together with demo data and documentation. I'll help you assemble it into a package that is installable from github (or maybe CRAN if it works really well).

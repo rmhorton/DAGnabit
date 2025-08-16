@@ -1,6 +1,6 @@
-# DAGnabit: An R package for generating Directed Acyclic Graph diagrams from BUGS code.
+# DAGnabit
 
-## Student Project
+## Student Project: Develop an R package for generating Directed Acyclic Graph diagrams from BUGS code.
 
 The ability to visualize graphs is widely useful:
 

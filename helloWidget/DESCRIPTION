@@ -1,0 +1,10 @@
+Package: helloWidget
+Title: A Simple HTMLWidget Example
+Version: 0.0.0.9000
+Authors@R: 
+    person("Robert", "Horton", , "cybertory@gmail.com", role = c("aut", "cre"))
+Description: This package is just to demonstrate how an HTML widget can wrap Javascript visualization code, and be deployed as an installable package on github. The example code was written by ChatGPT5.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2

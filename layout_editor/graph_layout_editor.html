@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Graph Layout Editor</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; }
+  #controls { width: 220px; padding: 10px; border-right: 1px solid #ccc; background: #f9f9f9; box-sizing: border-box; }
+  #graph { flex: 1; position: relative; }
+  svg { width: 100%; height: 100%; display: block; }
+  .link { stroke: #999; stroke-width: 2px; marker-end: url(#arrow); }
+  .node ellipse { fill: #d0e1f9; stroke: #333; stroke-width: 1.5px; }
+  .node text { font-size: 12px; text-anchor: middle; dominant-baseline: middle; pointer-events: none; user-select: none; }
+  button, input { width: 100%; margin: 6px 0; padding: 6px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <h3>Graph Layout Editor</h3>
+  <label><input type="checkbox" id="forceToggle" checked> Force-directed layout</label>
+  <button id="reset">Reset positions</button>
+  <button id="fit">Fit to view</button>
+  <button id="release">Release all nodes</button>
+  <hr>
+  <button id="exportSVG">Export SVG</button>
+  <button id="exportPNG">Export PNG</button>
+</div>
+<div id="graph">
+  <svg id="svgRoot" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow" viewBox="0 -5 10 10" refX="20" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#999" />
+      </marker>
+    </defs>
+  </svg>
+</div>
+<script>
+(function(){
+const nodes = [
+  {id:'A', label:'Alpha'}, {id:'B', label:'Beta'}, {id:'C', label:'Gamma'},
+  {id:'D', label:'Delta'}, {id:'E', label:'Epsilon'}
+];
+const links = [
+  {source:'A', target:'B'}, {source:'A', target:'C'}, {source:'B', target:'D'},
+  {source:'C', target:'D'}, {source:'D', target:'E'}
+];
+
+const svg = d3.select('#svgRoot');
+const width = () => svg.node().clientWidth;
+const height = () => svg.node().clientHeight;
+
+const gMain = svg.append('g').attr('class','viewport');
+const linkG = gMain.append('g').attr('class','links');
+const nodeG = gMain.append('g').attr('class','nodes');
+
+const zoom = d3.zoom().on('zoom', (event) => gMain.attr('transform', event.transform));
+svg.call(zoom);
+
+const simulation = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(d=>d.id).distance(120).strength(0.8))
+  .force('charge', d3.forceManyBody().strength(-300))
+  .force('center', d3.forceCenter(width()/2, height()/2));
+
+const link = linkG.selectAll('line').data(links).enter().append('line').attr('class','link');
+
+const node = nodeG.selectAll('g.node').data(nodes, d=>d.id).enter().append('g').attr('class','node');
+
+// Append ellipses sized according to text length
+node.append('ellipse')
+    .attr('rx', d => 10 + d.label.length * 4)
+    .attr('ry', 15);
+node.append('text').text(d=>d.label);
+
+node.call(d3.drag()
+  .on('start', (event,d)=>{ if(!event.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+  .on('drag', (event,d)=>{ d.fx=event.x; d.fy=event.y; })
+  .on('end', (event,d)=>{ if(!event.active) simulation.alphaTarget(0); })
+);
+
+simulation.on('tick', ()=>{
+  link.attr('x1', d=>d.source.x)
+      .attr('y1', d=>d.source.y)
+      .attr('x2', d=>d.target.x)
+      .attr('y2', d=>d.target.y);
+  node.attr('transform', d=>`translate(${d.x},${d.y})`);
+});
+
+const forceToggle = document.getElementById('forceToggle');
+forceToggle.addEventListener('change', (e)=>{
+  if(e.target.checked){ nodes.forEach(n=>{n.fx=null;n.fy=null;}); simulation.alpha(1).restart(); }
+  else { simulation.stop(); nodes.forEach(n=>{n.fx=n.x;n.fy=n.y;}); }
+});
+
+document.getElementById('reset').addEventListener('click', ()=>{
+  nodes.forEach(n=>{n.fx=null;n.fy=null;});
+  if(!forceToggle.checked) forceToggle.checked=true;
+  simulation.alpha(1).restart();
+});
+
+document.getElementById('release').addEventListener('click', ()=>{
+  nodes.forEach(n=>{ n.fx=null; n.fy=null; });
+  if(forceToggle.checked) simulation.alpha(1).restart();
+});
+
+document.getElementById('fit').addEventListener('click', ()=>{
+  const bounds = gMain.node().getBBox();
+  const svgW = svg.node().clientWidth, svgH = svg.node().clientHeight;
+  const scale = Math.min(svgW/(bounds.width+40), svgH/(bounds.height+40));
+  const translate = [svgW/2 - scale*(bounds.x+bounds.width/2), svgH/2 - scale*(bounds.y+bounds.height/2)];
+  svg.transition().duration(500).call(zoom.transform,d3.zoomIdentity.translate(translate[0],translate[1]).scale(scale));
+});
+
+function inlineStyles(el){
+  const css = window.getComputedStyle(el);
+  let style='';
+  for(let i=0;i<css.length;i++){const name=css[i]; style+=name+':'+css.getPropertyValue(name)+';';}
+  el.setAttribute('style',style);
+  if(el.hasAttribute('marker-end')) el.setAttribute('marker-end',el.getAttribute('marker-end'));
+  for(let child of el.children) inlineStyles(child);
+}
+
+function exportSVGFile(){
+  const svgNode=document.getElementById('svgRoot');
+  inlineStyles(svgNode);
+  const serializer=new XMLSerializer();
+  let svgString=serializer.serializeToString(svgNode);
+  if(!svgString.match(/^<svg[^>]+xmlns=/)) svgString=svgString.replace(/^<svg/,'<svg xmlns="http://www.w3.org/2000/svg"');
+  if(!svgString.match(/^<svg[^>]+"http:\/\/www.w3.org\/1999\/xlink"/)) svgString=svgString.replace(/^<svg/,'<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  const blob=new Blob([svgString],{type:'image/svg+xml;charset=utf-8'});
+  download('graph.svg',blob);
+}
+
+function exportPNGFile(){
+  const svgNode=document.getElementById('svgRoot');
+  inlineStyles(svgNode);
+  const serializer=new XMLSerializer();
+  const svgString=serializer.serializeToString(svgNode);
+  const svg64='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svgString)));
+  const img=new Image();
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    canvas.width=svgNode.clientWidth; canvas.height=svgNode.clientHeight;
+    const ctx=canvas.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0);
+    canvas.toBlob(blob=>download('graph.png',blob),'image/png');
+  };
+  img.src=svg64;
+}
+
+function download(filename,blob){const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);}
+
+document.getElementById('exportSVG').addEventListener('click', exportSVGFile);
+document.getElementById('exportPNG').addEventListener('click', exportPNGFile);
+
+simulation.alpha(1).restart();
+})();
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# Graph layout editor prototypes
+# Graph layout editor prototype
 
 This subtask is to develop a layout editor in client-side Javascript. This app should allow the user to rearrange the node locations, but it is not a general graph editor; for example, there is no need to be able to add nodes or edges, since these will all be specified in the BUGS code.
 The editor should export the graph to publication-ready formats (PNG and SVG for now).

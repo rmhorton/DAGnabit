@@ -10,6 +10,7 @@ The editor should export the graph to publication-ready formats (PNG and SVG for
 * user-specified fonts (some journals are picky about fonts in figures).
 * Alternative styles (black and white vs color; DoodleBUGS style, etc.)
 * User-supplied graph (as parsed from BUGS code; edgelists? dataframe? maybe as an igraph object?)
-* (?) user control of attributes like line and stroke thickness, since these depend on how big the figure will be (smaller figures may need relatively thicker lines). Or Maybe this is a matter of zooming before exporting.
-* (?) Support for decision trees
+* Wrap (in an htmlWidget?) for use in R.
+* (?) user control of attributes like line and stroke thickness, since these depend on how big the figure will be (smaller figures may need relatively thicker lines). Or maybe this is just a matter of appropriate zooming before exporting?
+* (?) Support for decision trees (including style, e.g, end nodes as left-pointing triangles).
 

@@ -14,4 +14,4 @@ The editor should export the graph to publication-ready formats (PNG and SVG for
 * Wrap (in an htmlWidget?) for use in R.
 * (?) user control of attributes like line and stroke thickness, since these depend on how big the figure will be (smaller figures may need relatively thicker lines). Or maybe this is just a matter of appropriate zooming before exporting?
 * (?) Support for decision trees (including style, e.g, end nodes as left-pointing triangles).
-
+* (???) Recreate DoodleBUGS

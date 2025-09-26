@@ -30,8 +30,7 @@ An important early implementation was WinBUGS for Windows.
 	- Health Technology Assessment
 		+ [R for Health Technology Assessment](https://gianluca.statistica.it/books/online/r-hta/) includes an introduction to the field.
 		+ [ARCESDMH](https://github.com/rmhorton/ARCESDMH) JAGS code
-	- Many other examples from WinBUGS documentation
-		+ hierarchical models
+	- Many other examples from [WinBUGS documentation[(https://github.com/rmhorton/DAGnabit/blob/main/examples/WinBUGS_help_examples.pdf)
 	
 * semi-automatic layout
 	- Use automatic layout for a first pass. Let the user edit it interactively by dragging nodes around (maybe in [dagitty](https://www.dagitty.net/dags.html), or something like it), then capture coordinates for the final figure.

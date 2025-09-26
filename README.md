@@ -18,7 +18,7 @@ An important early implementation was WinBUGS for Windows.
 		
 ### Ideas and comments
 
-* I have developed several version of a [proof-of-concept prototype](https://github.com/rmhorton/DAGnabit) using ChatGPT. It shows the idea of parsing BUGS code and drawing a graph, but it has issues:
+* I have developed several versions of a [proof-of-concept prototype](https://github.com/rmhorton/DAGnabit) using ChatGPT. It shows the idea of parsing BUGS code and drawing a graph, but it has issues:
 	- They make some mistakes (e.g., it included some things that are not really nodes, like the word "for")
 	- They do not fully implement the [diagram conventions](https://www.multibugs.org/documentation/latest/ModelSpecification.html) (plates, for example)
 
@@ -26,11 +26,11 @@ An important early implementation was WinBUGS for Windows.
 	- [ggdag](https://cran.r-project.org/web/packages/ggdag/vignettes/intro-to-ggdag.html)
 	- [shinydag](https://www.gerkelab.com/project/shinydag/)
 
-* There are lots of JAGS and WinBUGS programs available, many of which do not have published DAG diagrams. Here are some interesting biomedical examples:
+* There are lots of JAGS and WinBUGS programs available, some of which have published DAG diagrams while others do not. Here are some interesting biomedical examples:
 	- Health Technology Assessment
 		+ [R for Health Technology Assessment](https://gianluca.statistica.it/books/online/r-hta/) includes an introduction to the field.
 		+ [ARCESDMH](https://github.com/rmhorton/ARCESDMH) JAGS code
-	- Many other examples from [WinBUGS documentation](https://github.com/rmhorton/DAGnabit/blob/main/examples/WinBUGS_help_examples.pdf)
+	- Many other examples from the [WinBUGS documentation](https://github.com/rmhorton/DAGnabit/blob/main/examples/WinBUGS_help_examples.pdf)
 	
 * semi-automatic layout
 	- Use automatic layout for a first pass. Let the user edit it interactively by dragging nodes around (maybe in [dagitty](https://www.dagitty.net/dags.html), or something like it), then capture coordinates for the final figure.

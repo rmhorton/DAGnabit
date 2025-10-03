@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>helloWidget JS Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="../../inst/htmlwidgets/lib/htmlwidgets/htmlwidgets.js"></script>
+  <!-- REQUIRED: the helloWidget.js from the package -->
+  <script src="../../inst/htmlwidgets/helloWidget.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 24px; background:#fbfbfd; color:#222 }
+    h1 { font-size:1.2rem; margin-bottom:8px }
+    #widgetContainer { border:1px solid #e6e6ef; border-radius:8px; padding:10px; background:#fff; width:100%; min-height:260px }
+    .controls { margin-top:12px; display:flex; gap:8px; flex-wrap:wrap }
+    button { padding:8px 12px; border-radius:6px; border:1px solid #d0d0d8; background:#fff; cursor:pointer }
+    button:active { transform: translateY(1px); }
+  </style>
+</head>
+<body>
+  <h1>helloWidget JS Demo</h1>
+  <div id="widgetContainer" aria-live="polite"></div>
+  <div class="controls">
+    <button id="btn-default">Render default</button>
+    <button id="btn-empty">Render empty</button>
+    <button id="btn-neg">Render negatives</button>
+    <button id="btn-random">Render random</button>
+    <button id="btn-clear">Clear</button>
+  </div>
+
+  <script>
+    (function(){
+      'use strict';
+      const container = document.getElementById('widgetContainer');
+
+      if (typeof window.renderHelloWidget !== 'function') {
+        container.innerHTML = '<div style="color:#b00;">Error: renderHelloWidget is not defined. Ensure helloWidget.js is loaded.</div>';
+        throw new Error('renderHelloWidget not found.');
+      }
+
+      const TESTS = {
+        default: [1,3,2,5,4],
+        empty: [],
+        negatives: [10,-5,3,0,7],
+        random: Array.from({length:6}, () => Math.ceil(Math.random()*12))
+      };
+
+      function clearContainer() { container.innerHTML = ''; }
+
+      document.getElementById('btn-default').addEventListener('click', () => window.renderHelloWidget(container, { values: TESTS.default }));
+      document.getElementById('btn-empty').addEventListener('click', () => window.renderHelloWidget(container, { values: TESTS.empty }));
+      document.getElementById('btn-neg').addEventListener('click', () => window.renderHelloWidget(container, { values: TESTS.negatives }));
+      document.getElementById('btn-random').addEventListener('click', () => {
+        const arr = Array.from({ length: 6 }, () => Math.ceil(Math.random()*10));
+        window.renderHelloWidget(container, { values: arr });
+      });
+      document.getElementById('btn-clear').addEventListener('click', () => clearContainer());
+
+      // initial render
+      window.renderHelloWidget(container, { values: TESTS.default });
+    })();
+  </script>
+</body>
+</html>

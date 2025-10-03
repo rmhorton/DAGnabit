@@ -1,0 +1,13 @@
+
+model {
+  # Likelihood
+  for (i in 1:n) {
+    y[i] ~ dnorm(mu, tau)
+  }
+
+  # Priors
+  mu ~ dnorm(0, 0.001)   # vague prior
+  tau <- 1 / (sigma^2)
+  sigma <- 2              # known
+}
+

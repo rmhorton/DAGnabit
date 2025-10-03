@@ -69,6 +69,7 @@ Chat GPT can help with (or do) all of these things.
 	- Install the "helloWidget" package from github. Also, look through the files and directories for the helloWidget repo on the [Dagnabit repo](https://github.com/rmhorton/DAGnabit).
 	- Wrap the graph layout editor in an htmlwidget for use in R.
 	- Build the package.
+	- Deploy the package to yor github repo.
 
 4. Testing and Documentation [Naz]
 	- Help function developers complete and maintain the documentation for each function using [Roxygen](https://roxygen2.r-lib.org/).

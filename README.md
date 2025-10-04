@@ -55,23 +55,23 @@ An important early implementation was WinBUGS for Windows.
 
 Chat GPT can help with (or do) all of these things.
 
-1. BUGS parser [Shayla]
+1. BUGS parser [Shayla](https://github.com/sdcaoile21/DAGnabit-BUGS-parser)
 	- Pull variables and dependencies from code.
 	- Exclude keywords, functions, distribution names, etc.
 
-2. Graph Layout Editor [Liam]
+2. Graph Layout Editor [Liam](https://github.com/lskgrad/DAGnabit-Graph-Layout-Editor)
 	- Interactive graph layout editing with Javascript-powered widget
 	- Export layout for use in other graph layouts
 	- Produce publication-quality graph visualization (SVG & PNG)
 
-3. Building the R package [Tamara]
+3. Building the R package [Tamara](https://github.com/tbabic55/DAGnabit-R-Package)
 	- [Read the chat](https://chatgpt.com/share/68c303e3-6834-800a-8388-9dd6511d4e25) where I developed my [helloWidget package]()
 	- Install the "helloWidget" package from github. Also, look through the files and directories for the helloWidget repo on the [Dagnabit repo](https://github.com/rmhorton/DAGnabit).
 	- Wrap the graph layout editor in an htmlwidget for use in R.
 	- Build the package.
 	- Deploy the package to yor github repo.
 
-4. Testing and Documentation [Naz]
+4. Testing and Documentation [Naz](https://github.com/nyucel1234/DAGnabit-Documentation)
 	- Help function developers complete and maintain the documentation for each function using [Roxygen](https://roxygen2.r-lib.org/).
 	- Collect examples of BUGS programs with "official" DAG diagrams, to compare to DAGnabit-generated diagrams.
 	- Write vignettes (RMarkdown documents) showing how to run the examples (maybe show graphs before and after interactive editing?)

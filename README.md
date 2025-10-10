@@ -55,7 +55,7 @@ An important early implementation was WinBUGS for Windows.
 
 Chat GPT can help with (or do) all of these things.
 
-1. BUGS parser [Shayla](https://github.com/sdcaoile21/DAGnabit-BUGS-parser)
+1. BUGS parser [Shayla](https://github.com/sdcaoile21/DAGnabit_BUGS_Parser-)
 	- Pull variables and dependencies from code.
 	- Exclude keywords, functions, distribution names, etc.
 

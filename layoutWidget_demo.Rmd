@@ -1,0 +1,66 @@
+---
+title: "DAGnabit demo"
+author: "Bob"
+date: "2025-10-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Test `demo_layoutWidget`
+
+This function does not work in the RStudio Viewer; I believe this ibecause it does not have network access to the D3 library. So this document simply runs the test in RMarkdown.
+
+Here are the R commands to install (or re-install) the package from the [zip file](https://github.com/rmhorton/DAGnabit/blob/main/layoutWidget_0.5.6.zip):
+
+```
+# Completely uninstall any version you may have installed previously
+detach("package:layoutWidget", unload = TRUE, character.only = TRUE)
+remove.packages("layoutWidget")
+
+# Install from the zip file
+devtools::install_local("layoutWidget_0.5.6.zip", force = TRUE)
+
+```
+
+
+Load the package:
+```{r cars}
+library(layoutWidget)
+packageVersion("layoutWidget")
+```
+Show the model code:
+```{r show_model_code}
+cat(example_jags_model())
+```
+
+Run the demo:
+```{r run_demo}
+demo_layoutWidget()
+
+```
+
+Run the demo again, this time by specifying each step. First we show the code for the example JAGS model:
+
+```{r show_example_code}
+model_code <- example_jags_model()
+cat(model_code)
+```
+
+Now we parse it and show the tables:
+```{r parse_to_table}
+pe <- parse_dependencies(model_code)
+
+knitr::kable(pe$nodes, caption="Nodes")
+
+knitr::kable(pe$edges, caption="Edges")
+
+```
+
+Finally we show the graph in the layout editor widget:
+```{r show_graph_in_layout_editor}
+layoutWidget(pe$nodes, pe$edges, width = 1000, height = 600)
+
+```

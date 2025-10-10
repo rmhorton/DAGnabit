@@ -1,0 +1,190 @@
+---
+
+## title: "HTMLwidget Autodiagnosis Script" author: "Automated Diagnostic Script" output: html\_document params: pkg\_name: "TurtleROC" widget\_name: "rocSamplingWidget" auto\_run: true
+
+# Introduction
+
+> **Run this inside an RStudio Project that contains your package source.** This document automates and explains the process of diagnosing and fixing R htmlwidgets bindings. It’s parameterized for reuse: change the YAML `params` above for other packages/widgets.
+
+- **pkg\_name:** `r params$pkg_name`
+- **widget\_name:** `r params$widget_name`
+- **auto\_run:** `r params$auto_run`
+
+This version includes: (1) automated load/install; (2) NAMESPACE/export checks; (3) safe auto-rebuild with manual recovery block; (4) render test; (5) JS binding verification; (6) timestamped logs + consolidated summary.
+
+```{r
+knitr::opts_chunk$set(echo = TRUE, message = TRUE, warning = TRUE)
+
+pkg  <- params$pkg_name
+w    <- params$widget_name
+auto <- isTRUE(params$auto_run)
+
+ts <- function(...) {
+  cat(sprintf("[%s] ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")), paste0(...), "\n", sep = "")
+}
+
+safe <- function(expr) tryCatch(expr, error = function(e) e, warning = function(w) w)
+res <- new.env(parent = emptyenv())
+res$start_time <- Sys.time()
+res$checks <- list()
+add_check <- function(step, name, ok, info="") res$checks[[length(res$checks)+1]] <<- list(step=step, name=name, ok=ok, info=info)
+log_step <- function(title) ts(paste0("— ", title, " —"))
+```
+
+## Step 1: Verify and (if needed) Install `r pkg`
+
+```{r
+log_step(sprintf("Step 1: load/install %s", pkg))
+res$libpaths <- .libPaths()
+ts("libPaths:", paste(res$libpaths, collapse = ", "))
+
+ok <- safe(library(pkg, character.only = TRUE))
+if (inherits(ok, "error")) {
+  ts("⚠️ Load failed:", ok$message)
+  ts("Attempting devtools::install(force=TRUE)…")
+  inst <- safe(devtools::install(force = TRUE, lib = .libPaths()[1]))
+  if (inherits(inst, "error")) {
+    add_check(1, "Install package", FALSE, conditionMessage(inst))
+  } else {
+    ok2 <- safe(library(pkg, character.only = TRUE))
+    if (inherits(ok2, "error")) {
+      add_check(1, "Load package after install", FALSE, conditionMessage(ok2))
+    } else {
+      add_check(1, "Install & load package", TRUE)
+    }
+  }
+} else {
+  add_check(1, "Load package (already installed)", TRUE)
+}
+```
+
+## Step 1.2: Check Source File & `@export`
+
+```{r
+src_file <- file.path("R", paste0(w, ".R"))
+if (file.exists(src_file)) {
+  lines <- readLines(src_file, warn = FALSE)
+  has_export <- any(grepl("#'\\s*@export", lines))
+  has_def    <- any(grepl(paste0("\\b", w, "\\s*<-\\s*function"), lines))
+  add_check(1.2, "R/<widget>.R exists", TRUE, src_file)
+  add_check(1.2, "@export in roxygen", has_export)
+  add_check(1.2, "Function definition present", has_def)
+} else {
+  add_check(1.2, "R/<widget>.R exists", FALSE, src_file)
+}
+```
+
+## Step 1.3: Check `NAMESPACE` for Export
+
+```{r
+ns_file <- "NAMESPACE"
+res$ns_has_export <- FALSE
+if (file.exists(ns_file)) {
+  ns_lines <- readLines(ns_file, warn = FALSE)
+  res$ns_has_export <- any(grepl(paste0("^\\s*export\\(", w, "\\)"), ns_lines))
+  add_check(1.3, "NAMESPACE present", TRUE)
+  add_check(1.3, "NAMESPACE has export(<widget>)", res$ns_has_export)
+} else {
+  add_check(1.3, "NAMESPACE present", FALSE, "not found")
+}
+```
+
+## Step 1.4: Safe Auto-Rebuild and Manual Recovery Fallback
+
+```{r
+need_rebuild <- !(pkg %in% loadedNamespaces()) || !(w %in% getNamespaceExports(pkg)) || !isTRUE(res$ns_has_export)
+if (auto && need_rebuild) {
+  rb <- safe(roxygen2::roxygenise(package.dir = ".", clean = TRUE))
+  inst <- safe(devtools::install(force = TRUE, lib = .libPaths()[1]))
+  ok2 <- safe(library(pkg, character.only = TRUE))
+  add_check(1.4, "Rebuild completed", !inherits(rb, "error"))
+  add_check(1.4, "Install completed", !inherits(inst, "error"))
+  add_check(1.4, "Reload succeeded", !inherits(ok2, "error"))
+} else {
+  add_check(1.4, "Rebuild not required", TRUE)
+}
+```
+
+## Step 2: Diagnosis Table (if export missing)
+
+```{r
+exports <- if (pkg %in% loadedNamespaces()) getNamespaceExports(pkg) else character()
+missing_export <- !(w %in% exports)
+if (missing_export) {
+  diagnosis <- data.frame(
+    Symptom = c("Function not exported", "NAMESPACE missing entry", "Render step blank"),
+    Cause = c("Missing #' @export or file not under /R", "Locked or stale NAMESPACE file", "JS or YAML binding mismatch"),
+    Fix = c("Add #' @export above function and rerun roxygenise()", "Delete NAMESPACE, rerun roxygen2::roxygenise()", "Check inst/htmlwidgets/*.js and YAML paths"),
+    stringsAsFactors = FALSE
+  )
+  knitr::kable(diagnosis, caption = "Diagnosis Table: Probable Causes and Fixes")
+  add_check(2, "Diagnosis run", TRUE)
+} else {
+  add_check(2, "Export detected", TRUE)
+}
+```
+
+## Step 3: Render Test Widget
+
+```{r
+output_file <- tempfile(paste0(w, "_"), fileext = ".html")
+can_render <- pkg %in% loadedNamespaces() && (w %in% getNamespaceExports(pkg))
+if (!can_render) {
+  render_success <- FALSE
+  add_check(3, "Render skipped — export missing", FALSE)
+} else {
+  obj <- safe(htmlwidgets::saveWidget(
+    do.call(getExportedValue(pkg, w), list(
+      scores = seq(0.9, 0.1, -0.1),
+      labels = c(TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE),
+      autoArrange = TRUE
+    )),
+    output_file,
+    selfcontained = FALSE
+  ))
+  render_success <- !inherits(obj, "error")
+  add_check(3, "Render success", render_success, output_file)
+}
+```
+
+## Step 4: JS Binding Verification
+
+```{r
+js_file <- system.file(file.path("htmlwidgets", paste0(w, ".js")), package = pkg)
+if (file.exists(js_file)) {
+  lines <- readLines(js_file, warn = FALSE)
+  has_binding <- any(grepl("HTMLWidgets\\.widget\\s*\\(\\s*\\{", lines))
+  add_check(4, "JS binding present", has_binding)
+} else {
+  add_check(4, "JS file present", FALSE)
+}
+```
+
+## Step 5: Timestamped Summary of All Checks
+
+```{r
+res$end_time <- Sys.time()
+summary <- do.call(rbind, lapply(res$checks, function(x) data.frame(
+  Step = x$step,
+  Check = x$name,
+  Status = ifelse(x$ok, "✅", "⚠️"),
+  Info = x$info,
+  Time = format(Sys.time(), "%H:%M:%S"),
+  stringsAsFactors = FALSE
+)))
+knitr::kable(summary, caption = "Timestamped Summary of All Checks")
+
+rerun <- any(!sapply(res$checks, function(x) x$ok))
+cat("\nRerun suggested:", if (rerun) "Yes — unresolved issues remain." else "No — all checks passed.", "\n")
+```
+
+# ChatGPT Integration Notes
+
+- **This diagnostic RMarkdown can live directly in a ChatGPT canvas.** ChatGPT can modify code, add tests, or refine instructions iteratively.
+- The **ChatGPT Desktop App** supports file **uploads/downloads** more reliably than the web UI.
+- After local edits, **re-knit** and upload the new HTML/PDF to ChatGPT for feedback.
+
+---
+
+> 🧠 *If you repeatedly see NAMESPACE or export issues, knit once, then run the printed manual recovery block in your Console before re-knitting.*
+

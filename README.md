@@ -76,6 +76,15 @@ Chat GPT can help with (or do) all of these things.
 	- Collect examples of BUGS programs with "official" DAG diagrams, to compare to DAGnabit-generated diagrams.
 	- Write vignettes (RMarkdown documents) showing how to run the examples (maybe show graphs before and after interactive editing?)
 
+
+### Git and GitHub
+	- [Two decades of Git: A conversation with creator Linus Torvalds](https://www.youtube.com/watch?v=sCr_gb8rdEI&t=15s)
+		+ What else is the developer famous for?
+		+ Look at the comments.
+	- git for local use
+	- git vs github
+	
+	
 ### Deliverables
 
 This project is to build an R package to draw DAG diagrams from a given BUGS/JAGS model. The package will include:

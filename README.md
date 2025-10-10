@@ -65,11 +65,13 @@ Chat GPT can help with (or do) all of these things.
 	- Produce publication-quality graph visualization (SVG & PNG)
 
 3. Building the R package [Tamara](https://github.com/tbabic55/DAGnabit-R-Package)
-	- [Read the chat](https://chatgpt.com/share/68c303e3-6834-800a-8388-9dd6511d4e25) where I developed my [helloWidget package]()
+	- [Read the chat](https://chatgpt.com/share/68c303e3-6834-800a-8388-9dd6511d4e25) where I developed my [helloWidget package](https://github.com/rmhorton/DAGnabit/tree/main/helloWidget)
 	- Install the "helloWidget" package from github. Also, look through the files and directories for the helloWidget repo on the [Dagnabit repo](https://github.com/rmhorton/DAGnabit).
 	- Wrap the graph layout editor in an htmlwidget for use in R.
 	- Build the package.
 	- Deploy the package to yor github repo.
+	- [Read the chat](https://chatgpt.com/share/68e97f0e-4d60-800a-a107-42033aaa5df7) where I developed the [layoutWidget package](https://github.com/rmhorton/DAGnabit/blob/main/layoutWidget_0.5.6.zip)
+	- Download the zip file for this package and install it as shown in [layoutWidget_demo.Rmd](https://github.com/rmhorton/DAGnabit/blob/main/layoutWidget_demo.Rmd)
 
 4. Testing and Documentation [Naz](https://github.com/nyucel1234/DAGnabit-Documentation)
 	- Help function developers complete and maintain the documentation for each function using [Roxygen](https://roxygen2.r-lib.org/).
